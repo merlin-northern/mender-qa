@@ -255,6 +255,10 @@ EOF
 
 clean_build_config() {
     sed -i.backup -e 's/^MENDER_ARTIFACT_NAME = .*/MENDER_ARTIFACT_NAME = "mender-image-clean"/' $BUILDDIR/conf/local.conf
+    echo 'IMAGE_INSTALL_append = " openssh lsof"' >> "$BUILDDIR/conf/local.conf"
+    echo "$BUILDDIR/conf/local.conf {{{"
+    cat "$BUILDDIR/conf/local.conf" | grep -v '^#' | grep -v ^$ || true
+    echo "}}}"
 }
 
 restore_build_config() {
@@ -276,6 +280,7 @@ copy_clean_image() {
     egrep -q '\bmender-image-uefi\b' <(bitbake -e $image_name | egrep '^MENDER_FEATURES=') && extension="uefiimg"
     egrep -q '\bmender-image-sd\b' <(bitbake -e $image_name | egrep '^MENDER_FEATURES=') && extension="sdimg"
     filename="$(bitbake -e $image_name | egrep '^IMAGE_LINK_NAME=' | sed -e 's/.*=//' -e 's/\"//g').${extension}"
+    mkdir -p "${WORKSPACE}/${board_name}" 1>&2
     cp -Lv "${BUILDDIR}/tmp/deploy/images/${machine_name}/${filename}" "${WORKSPACE}/${board_name}/clean-image-${filename}" 1>&2
     cp -Lv "${BUILDDIR}/tmp/deploy/images/${machine_name}/${filename}" "${BUILDDIR}/tmp/deploy/images/${machine_name}/clean-${filename}" 1>&2
     echo "images: {{{" 1>&2
@@ -286,6 +291,8 @@ copy_clean_image() {
     echo "}}}" 1>&2
     echo "rc: ${BUILDDIR}/tmp/deploy/images/${machine_name}/clean-${filename}" 1>&2
     echo "${BUILDDIR}/tmp/deploy/images/${machine_name}/clean-${filename}"
+    rm -f "`readlink \"${BUILDDIR}/tmp/deploy/images/${machine_name}/${filename}\"`" || true
+    rm -f "${BUILDDIR}/tmp/deploy/images/${machine_name}/${filename}" || true
 }
 
 init_environment() {
